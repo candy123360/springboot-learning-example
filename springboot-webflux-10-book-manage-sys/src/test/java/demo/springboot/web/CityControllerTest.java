@@ -6,12 +6,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class CityControllerTest {
 
@@ -20,12 +18,12 @@ public class CityControllerTest {
     @Test
     public void postCitySubscribesToSaveBeforeRedirect() {
         City city = new City();
-        CityService cityService = mock(CityService.class);
+        StubCityService cityService = new StubCityService();
         AtomicBoolean subscribed = new AtomicBoolean(false);
-        when(cityService.insertByCity(city)).thenReturn(Mono.defer(() -> {
+        cityService.insertResult = Mono.defer(() -> {
             subscribed.set(true);
             return Mono.just(city);
-        }));
+        });
 
         CityController cityController = new CityController();
         cityController.cityService = cityService;
@@ -37,12 +35,12 @@ public class CityControllerTest {
     @Test
     public void putCitySubscribesToUpdateBeforeRedirect() {
         City city = new City();
-        CityService cityService = mock(CityService.class);
+        StubCityService cityService = new StubCityService();
         AtomicBoolean subscribed = new AtomicBoolean(false);
-        when(cityService.update(city)).thenReturn(Mono.defer(() -> {
+        cityService.updateResult = Mono.defer(() -> {
             subscribed.set(true);
             return Mono.just(city);
-        }));
+        });
 
         CityController cityController = new CityController();
         cityController.cityService = cityService;
@@ -54,9 +52,9 @@ public class CityControllerTest {
     @Test
     public void deleteCitySubscribesToDeleteBeforeRedirect() {
         Long cityId = 1L;
-        CityService cityService = mock(CityService.class);
+        StubCityService cityService = new StubCityService();
         AtomicBoolean subscribed = new AtomicBoolean(false);
-        when(cityService.delete(cityId)).thenReturn(Mono.fromRunnable(() -> subscribed.set(true)).then());
+        cityService.deleteResult = Mono.fromRunnable(() -> subscribed.set(true)).then();
 
         CityController cityController = new CityController();
         cityController.cityService = cityService;
@@ -72,5 +70,37 @@ public class CityControllerTest {
                 .getAnnotation(RequestMapping.class);
 
         Assert.assertArrayEquals(new RequestMethod[] {RequestMethod.POST}, mapping.method());
+    }
+
+    private static class StubCityService implements CityService {
+
+        private Mono<City> insertResult = Mono.empty();
+        private Mono<City> updateResult = Mono.empty();
+        private Mono<Void> deleteResult = Mono.empty();
+
+        @Override
+        public Flux<City> findAll() {
+            return Flux.empty();
+        }
+
+        @Override
+        public Mono<City> insertByCity(City city) {
+            return insertResult;
+        }
+
+        @Override
+        public Mono<City> update(City city) {
+            return updateResult;
+        }
+
+        @Override
+        public Mono<Void> delete(Long id) {
+            return deleteResult;
+        }
+
+        @Override
+        public Mono<City> findById(Long id) {
+            return Mono.empty();
+        }
     }
 }
