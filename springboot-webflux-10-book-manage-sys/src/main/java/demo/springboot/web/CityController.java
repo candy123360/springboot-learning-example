@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import reactor.core.publisher.Mono;
 
-import java.awt.print.Book;
-
 /**
  * city 控制层
  * <p>
@@ -43,9 +41,8 @@ public class CityController {
     }
 
     @RequestMapping(value = "/create", method = RequestMethod.POST)
-    public String postCity(@ModelAttribute City city) {
-        cityService.insertByCity(city);
-        return REDIRECT_TO_CITY_URL;
+    public Mono<String> postCity(@ModelAttribute City city) {
+        return cityService.insertByCity(city).then(Mono.just(REDIRECT_TO_CITY_URL));
     }
 
     @RequestMapping(value = "/update/{id}", method = RequestMethod.GET)
@@ -57,15 +54,13 @@ public class CityController {
     }
 
     @RequestMapping(value = "/update", method = RequestMethod.POST)
-    public String putBook(@ModelAttribute City city) {
-        cityService.update(city);
-        return REDIRECT_TO_CITY_URL;
+    public Mono<String> putBook(@ModelAttribute City city) {
+        return cityService.update(city).then(Mono.just(REDIRECT_TO_CITY_URL));
     }
 
     @RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
-    public String deleteCity(@PathVariable Long id) {
-        cityService.delete(id);
-        return CITY_LIST_PATH_NAME;
+    public Mono<String> deleteCity(@PathVariable Long id) {
+        return cityService.delete(id).then(Mono.just(REDIRECT_TO_CITY_URL));
     }
 
 }
