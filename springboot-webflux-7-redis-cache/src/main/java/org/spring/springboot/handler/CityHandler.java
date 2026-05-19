@@ -62,7 +62,7 @@ public class CityHandler {
     }
 
     public Flux<City> findAllCity() {
-        return cityRepository.findAll().cache();
+        return cityRepository.findAll();
     }
 
     public Mono<City> modifyCity(City city) {
@@ -76,21 +76,19 @@ public class CityHandler {
             LOGGER.info("CityHandler.modifyCity() : 从缓存中删除城市 ID >> " + city.getId());
         }
 
-        return cityRepository.save(city).cache();
+        return cityRepository.save(city);
     }
 
     public Mono<Long> deleteCity(Long id) {
+        return Mono.<Void>fromRunnable(() -> {
+            // 缓存存在，删除缓存
+            String key = "city_" + id;
+            boolean hasKey = redisTemplate.hasKey(key);
+            if (hasKey) {
+                redisTemplate.delete(key);
 
-        // 缓存存在，删除缓存
-        String key = "city_" + id;
-        boolean hasKey = redisTemplate.hasKey(key);
-        if (hasKey) {
-            redisTemplate.delete(key);
-
-            LOGGER.info("CityHandler.deleteCity() : 从缓存中删除城市 ID >> " + id);
-        }
-
-        cityRepository.deleteById(id);
-        return Mono.create(cityMonoSink -> cityMonoSink.success(id));
+                LOGGER.info("CityHandler.deleteCity() : 从缓存中删除城市 ID >> " + id);
+            }
+        }).then(cityRepository.deleteById(id)).then(Mono.just(id));
     }
 }
