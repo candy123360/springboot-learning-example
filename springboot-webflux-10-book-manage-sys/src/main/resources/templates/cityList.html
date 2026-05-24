@@ -32,7 +32,11 @@
             <td><a th:href="@{/city/update/{cityId}(cityId=${city.id})}" th:text="${city.cityName}"></a></td>
             <td th:text="${city.description}"></td>
             <td th:text="${city.provinceId}"></td>
-            <td><a class="btn btn-danger" th:href="@{/city/delete/{cityId}(cityId=${city.id})}">删除</a></td>
+            <td>
+                <form th:action="@{/city/delete/{cityId}(cityId=${city.id})}" method="post" style="display:inline">
+                    <button class="btn btn-danger" type="submit">删除</button>
+                </form>
+            </td>
         </tr>
 
         </tbody>

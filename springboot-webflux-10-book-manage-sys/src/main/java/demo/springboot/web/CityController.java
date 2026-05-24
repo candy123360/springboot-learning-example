@@ -58,7 +58,7 @@ public class CityController {
         return cityService.update(city).thenReturn(REDIRECT_TO_CITY_URL);
     }
 
-    @RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = "/delete/{id}", method = RequestMethod.POST)
     public Mono<String> deleteCity(@PathVariable Long id) {
         return cityService.delete(id).thenReturn(REDIRECT_TO_CITY_URL);
     }
