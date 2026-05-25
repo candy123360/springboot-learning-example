@@ -90,7 +90,6 @@ public class CityHandler {
             LOGGER.info("CityHandler.deleteCity() : 从缓存中删除城市 ID >> " + id);
         }
 
-        cityRepository.deleteById(id);
-        return Mono.create(cityMonoSink -> cityMonoSink.success(id));
+        return cityRepository.deleteById(id).thenReturn(id);
     }
 }
