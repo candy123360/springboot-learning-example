@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import reactor.core.publisher.Mono;
 
-import java.awt.print.Book;
-
 /**
  * city 控制层
  * <p>
@@ -30,9 +28,10 @@ public class CityController {
     CityService cityService;
 
     @RequestMapping(method = RequestMethod.GET)
-    public String getCityList(final Model model) {
-        model.addAttribute("cityList", cityService.findAll());
-        return CITY_LIST_PATH_NAME;
+    public Mono<String> getCityList(final Model model) {
+        return cityService.findAll().collectList()
+                .doOnNext(cityList -> model.addAttribute("cityList", cityList))
+                .thenReturn(CITY_LIST_PATH_NAME);
     }
 
     @RequestMapping(value = "/create", method = RequestMethod.GET)
@@ -43,29 +42,26 @@ public class CityController {
     }
 
     @RequestMapping(value = "/create", method = RequestMethod.POST)
-    public String postCity(@ModelAttribute City city) {
-        cityService.insertByCity(city);
-        return REDIRECT_TO_CITY_URL;
+    public Mono<String> postCity(@ModelAttribute City city) {
+        return cityService.insertByCity(city).thenReturn(REDIRECT_TO_CITY_URL);
     }
 
     @RequestMapping(value = "/update/{id}", method = RequestMethod.GET)
-    public String getCity(@PathVariable Long id, final Model model) {
-        final Mono<City> city = cityService.findById(id);
-        model.addAttribute("city", city);
-        model.addAttribute("action", "update");
-        return CITY_FORM_PATH_NAME;
+    public Mono<String> getCity(@PathVariable Long id, final Model model) {
+        return cityService.findById(id)
+                .doOnNext(city -> model.addAttribute("city", city))
+                .doOnSuccess(city -> model.addAttribute("action", "update"))
+                .thenReturn(CITY_FORM_PATH_NAME);
     }
 
     @RequestMapping(value = "/update", method = RequestMethod.POST)
-    public String putBook(@ModelAttribute City city) {
-        cityService.update(city);
-        return REDIRECT_TO_CITY_URL;
+    public Mono<String> putBook(@ModelAttribute City city) {
+        return cityService.update(city).thenReturn(REDIRECT_TO_CITY_URL);
     }
 
     @RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
-    public String deleteCity(@PathVariable Long id) {
-        cityService.delete(id);
-        return CITY_LIST_PATH_NAME;
+    public Mono<String> deleteCity(@PathVariable Long id) {
+        return cityService.delete(id).thenReturn(REDIRECT_TO_CITY_URL);
     }
 
 }
