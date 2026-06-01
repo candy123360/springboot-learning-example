@@ -7,7 +7,6 @@ import org.junit.Test;
 import org.springframework.ui.ExtendedModelMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,9 +21,7 @@ public class CityControllerReactiveTest {
         CityController cityController = cityController(cityService);
         City city = city(1L);
 
-        StepVerifier.create(cityController.postCity(city))
-                .expectNext("redirect:/city")
-                .verifyComplete();
+        Assert.assertEquals("redirect:/city", cityController.postCity(city).block());
 
         Assert.assertSame(city, cityService.insertedCity.get());
         Assert.assertTrue(cityService.insertSubscribed.get());
@@ -36,9 +33,7 @@ public class CityControllerReactiveTest {
         CityController cityController = cityController(cityService);
         City city = city(2L);
 
-        StepVerifier.create(cityController.putBook(city))
-                .expectNext("redirect:/city")
-                .verifyComplete();
+        Assert.assertEquals("redirect:/city", cityController.putBook(city).block());
 
         Assert.assertSame(city, cityService.updatedCity.get());
         Assert.assertTrue(cityService.updateSubscribed.get());
@@ -49,9 +44,7 @@ public class CityControllerReactiveTest {
         RecordingCityService cityService = new RecordingCityService();
         CityController cityController = cityController(cityService);
 
-        StepVerifier.create(cityController.deleteCity(3L))
-                .expectNext("redirect:/city")
-                .verifyComplete();
+        Assert.assertEquals("redirect:/city", cityController.deleteCity(3L).block());
 
         Assert.assertEquals(3L, cityService.deletedId.get());
         Assert.assertTrue(cityService.deleteSubscribed.get());
@@ -65,9 +58,7 @@ public class CityControllerReactiveTest {
         CityController cityController = cityController(cityService);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        StepVerifier.create(cityController.getCityList(model))
-                .expectNext("cityList")
-                .verifyComplete();
+        Assert.assertEquals("cityList", cityController.getCityList(model).block());
 
         List cityList = (List) model.asMap().get("cityList");
         Assert.assertEquals(1, cityList.size());
