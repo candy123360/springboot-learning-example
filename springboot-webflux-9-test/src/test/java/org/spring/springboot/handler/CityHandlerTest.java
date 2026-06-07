@@ -1,52 +1,49 @@
 package org.spring.springboot.handler;
 
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.spring.springboot.domain.City;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.BodyInserters;
+import org.spring.springboot.dao.CityRepository;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CityHandlerTest {
 
-    @Autowired
-    private WebTestClient webClient;
-
-    private static Map<String, City> cityMap = new HashMap<>();
-
-    @BeforeClass
-    public static void setup() throws Exception {
-        City wl = new City();
-        wl.setId(1L);
-        wl.setProvinceId(2L);
-        wl.setCityName("WL");
-        wl.setDescription("WL IS GOOD");
-        cityMap.put("WL", wl);
-    }
-
     @Test
-    public void testSave() throws Exception {
+    public void deleteCitySubscribesToRepositoryDelete() {
+        final AtomicBoolean deleteSubscribed = new AtomicBoolean(false);
+        CityHandler cityHandler = new CityHandler(repositoryProxy(new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) {
+                if ("deleteById".equals(method.getName())) {
+                    return Mono.fromRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            deleteSubscribed.set(true);
+                        }
+                    });
+                }
+                throw new UnsupportedOperationException(method.getName());
+            }
+        }));
 
-        City expectCity = webClient.post().uri("/city")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromObject(cityMap.get("WL")))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(City.class).returnResult().getResponseBody();
+        Mono<Long> deleteResult = cityHandler.deleteCity(1L);
 
-        Assert.assertNotNull(expectCity);
-        Assert.assertEquals(expectCity.getId(), cityMap.get("WL").getId());
-        Assert.assertEquals(expectCity.getCityName(), cityMap.get("WL").getCityName());
+        Assert.assertFalse(deleteSubscribed.get());
+        StepVerifier.create(deleteResult)
+                .expectNext(1L)
+                .verifyComplete();
+        Assert.assertTrue(deleteSubscribed.get());
     }
 
+    private CityRepository repositoryProxy(InvocationHandler invocationHandler) {
+        return (CityRepository) Proxy.newProxyInstance(
+                CityRepository.class.getClassLoader(),
+                new Class[]{CityRepository.class},
+                invocationHandler);
+    }
 }
