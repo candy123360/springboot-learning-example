@@ -1,52 +1,60 @@
 package org.spring.springboot.handler;
 
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.spring.springboot.dao.CityRepository;
 import org.spring.springboot.domain.City;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.BodyInserters;
+import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CityHandlerTest {
 
-    @Autowired
-    private WebTestClient webClient;
-
-    private static Map<String, City> cityMap = new HashMap<>();
-
-    @BeforeClass
-    public static void setup() throws Exception {
+    @Test
+    public void testSave() {
         City wl = new City();
         wl.setId(1L);
         wl.setProvinceId(2L);
         wl.setCityName("WL");
         wl.setDescription("WL IS GOOD");
-        cityMap.put("WL", wl);
-    }
 
-    @Test
-    public void testSave() throws Exception {
+        AtomicReference<City> savedCity = new AtomicReference<>();
+        CityHandler handler = new CityHandler(repositorySavingInto(savedCity));
 
-        City expectCity = webClient.post().uri("/city")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromObject(cityMap.get("WL")))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(City.class).returnResult().getResponseBody();
+        Mono<City> result = handler.save(wl);
+
+        Assert.assertNull(savedCity.get());
+        City expectCity = result.block();
 
         Assert.assertNotNull(expectCity);
-        Assert.assertEquals(expectCity.getId(), cityMap.get("WL").getId());
-        Assert.assertEquals(expectCity.getCityName(), cityMap.get("WL").getCityName());
+        Assert.assertSame(wl, expectCity);
+        Assert.assertSame(wl, savedCity.get());
+    }
+
+    private CityRepository repositorySavingInto(AtomicReference<City> savedCity) {
+        return (CityRepository) Proxy.newProxyInstance(
+                CityRepository.class.getClassLoader(),
+                new Class[]{CityRepository.class},
+                (proxy, method, args) -> {
+                    if ("save".equals(method.getName())) {
+                        City city = (City) args[0];
+                        return Mono.defer(() -> {
+                            savedCity.set(city);
+                            return Mono.just(city);
+                        });
+                    }
+                    if ("toString".equals(method.getName())) {
+                        return "CityRepository save test proxy";
+                    }
+                    if ("hashCode".equals(method.getName())) {
+                        return System.identityHashCode(proxy);
+                    }
+                    if ("equals".equals(method.getName())) {
+                        return proxy == args[0];
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
     }
 
 }
